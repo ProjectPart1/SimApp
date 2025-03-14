@@ -1,34 +1,29 @@
-version: 2.1 # YAML 2.1
-workflows:
-  version: 2 # CircleCI 2
-  build:
-    jobs:
-      - build: # tasks we want CircleCI to execute (cont integr)
-          filters:
-            branches:
-              only: main  # Run CI only on the main branch
-      - deploy:
-          filters:
-            branches:
-              only: main
-          requires: 
-            - build # means if our build job does not pass our deploy job will not be run
-jobs:
-  build:  # what happens in our build job
-    working_directory: ~/SimApp
+version: 2.1
+executors:
+  docker-executor:
     docker:
-      - image: circleci/node:16  # version of node 
+      - image: cimg/base:stable
+    working_directory: ~/project
+jobs:
+  build_and_push_ecr:
+    executor: docker-executor
     steps:
-      - checkout # first is the checkout the GitHub repository
+      - checkout
+      - setup_remote_docker:
+          version: 20.10.7
       - run:
-          name: Update npm # version of npm
-          command: 'npm install npm@8'  # Install locally without global update
-      - restore_cache:
-          key: dependency-cache-{{ checksum "package-lock.json" }} # install dependencies for node app to use
+          name: Login to AWS ECR
+          command: |
+            echo $AWS_ECR_PASSWORD | docker login -u AWS --password-stdin $AWS_ECR_URL
       - run:
-          name: Install npm dependencies
-          command: npm install --unsafe-perm # Fix permission issue during install
-      - save_cache:
-          key: dependency-cache-{{ checksum "package-lock.json" }}
-          paths:
-            - ./node_modules
+          name: Build Docker Image
+          command: docker build -t $ECR_REPOSITORY:$CIRCLE_SHA1 .
+      - run:
+          name: Push Docker Image to ECR
+          command: docker push $ECR_REPOSITORY:$CIRCLE_SHA1
+workflows:
+  version: 2
+  build_and_deploy:
+    jobs:
+      - build_and_push_ecr:
+          context: aws-ecr-context
