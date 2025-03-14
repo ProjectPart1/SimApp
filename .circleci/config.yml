@@ -1,9 +1,10 @@
 version: 2.1 # YAML 2.1
+
 workflows:
   version: 2 # CircleCI 2
   build:
     jobs:
-      - build: # tasks we want CircleCI to execute (cont integr)
+      - build: # tasks we want CircleCI to execute (Continuous Integration)
           filters:
             branches:
               only: main  # Run CI only on the main branch
@@ -12,19 +13,19 @@ workflows:
             branches:
               only: main
           requires: 
-            - build # means if our build job does not pass our deploy job will not be run
+            - build # If the build job fails, deploy won't run
 jobs:
-  build:  # what happens in our build job
+  build:  # What happens in the build job
     working_directory: ~/SimApp
     docker:
-      - image: circleci/node:16  # version of node 
+      - image: circleci/node:16  # Node.js version
     steps:
-      - checkout # first is the checkout the GitHub repository
+      - checkout # Checkout the GitHub repository
       - run:
-          name: Update npm # version of npm
+          name: Update npm # Update npm
           command: 'npm install npm@8'  # Install locally without global update
       - restore_cache:
-          key: dependency-cache-{{ checksum "package-lock.json" }} # install dependencies for node app to use
+          key: dependency-cache-{{ checksum "package-lock.json" }} # Install dependencies for Node.js app
       - run:
           name: Install npm dependencies
           command: npm install --unsafe-perm # Fix permission issue during install
